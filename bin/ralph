@@ -1,0 +1,142 @@
+#!/usr/bin/env python3
+"""Ralph Dark Factory - Main entry point."""
+
+import argparse
+import sys
+from pathlib import Path
+
+# Add src to path
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from src.plan import generate_plan, save_plan, load_plan
+from src.scenario_author import generate_scenarios, save_scenarios
+from src.signal import Signal
+from src.ralph import Ralph
+
+
+def cmd_plan(args):
+    """Generate implementation plan from specs."""
+    plan = generate_plan()
+    save_plan(plan)
+    print(f"Generated IMPLEMENTATION_PLAN.md with {len(plan.tasks)} tasks")
+
+
+def cmd_scenarios(args):
+    """Generate scenarios from specs."""
+    scenarios = generate_scenarios()
+    save_scenarios(scenarios)
+    print(f"Generated {len(scenarios)} scenarios in scenarios/")
+
+
+def cmd_run(args):
+    """Run Ralph agent loop."""
+    ralph = Ralph(args.project)
+
+    # Enforce filesystem isolation
+    ralph.enforce_isolation()
+
+    # Load plan
+    ralph.load_plan()
+
+    # Get current task
+    task = ralph.get_current_task()
+    if not task:
+        print("All tasks complete")
+        ralph.mark_done()
+        return
+
+    print(f"Working on: {task.title}")
+
+    # Load and process signal
+    ralph.load_signal()
+
+    if ralph.signal.spinning:
+        print(f"SPINNING: Task '{ralph.signal.task}' retrying too many times")
+        print("Operator intervention required")
+        sys.exit(1)
+
+    if ralph.signal.done:
+        print("All tasks complete")
+        sys.exit(0)
+
+    ralph.process_signal()
+
+
+def cmd_signal(args):
+    """Read and display current signal."""
+    signal = Signal.read()
+    print(f"Signal: {signal.to_dict()}")
+
+
+def cmd_harness(args):
+    """Run scenario harness."""
+    from src.harness import run_harness
+
+    results = run_harness()
+    passed = sum(1 for r in results if r.passed)
+    failed = len(results) - passed
+    print(f"Harness results: {passed} passed, {failed} failed")
+
+    for r in results:
+        status = "PASS" if r.passed else "FAIL"
+        print(f"  [{status}] {r.scenario_name}")
+
+
+def cmd_status(args):
+    """Show current status."""
+    plan = load_plan()
+    pending = plan.get_pending_tasks()
+
+    print(f"Project: {plan.project_name}")
+    print(f"Tasks: {len(plan.tasks)} total, {len(pending)} pending")
+
+    for task in pending[:5]:
+        print(f"  [{task.id}] {task.title} (retries: {task.retry_count})")
+
+    if len(pending) > 5:
+        print(f"  ... and {len(pending) - 5} more")
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Ralph Dark Factory")
+    subparsers = parser.add_subparsers(dest="command", help="Commands")
+
+    # plan command
+    subparsers.add_parser("plan", help="Generate implementation plan")
+
+    # scenarios command
+    subparsers.add_parser("scenarios", help="Generate scenarios from specs")
+
+    # run command
+    run_parser = subparsers.add_parser("run", help="Run Ralph agent loop")
+    run_parser.add_argument("--project", default=".", help="Project path")
+
+    # signal command
+    subparsers.add_parser("signal", help="Read current signal")
+
+    # harness command
+    subparsers.add_parser("harness", help="Run scenario harness")
+
+    # status command
+    subparsers.add_parser("status", help="Show current status")
+
+    args = parser.parse_args()
+
+    if args.command == "plan":
+        cmd_plan(args)
+    elif args.command == "scenarios":
+        cmd_scenarios(args)
+    elif args.command == "run":
+        cmd_run(args)
+    elif args.command == "signal":
+        cmd_signal(args)
+    elif args.command == "harness":
+        cmd_harness(args)
+    elif args.command == "status":
+        cmd_status(args)
+    else:
+        parser.print_help()
+
+
+if __name__ == "__main__":
+    main()
