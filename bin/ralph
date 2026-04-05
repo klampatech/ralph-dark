@@ -72,7 +72,8 @@ def cmd_harness(args):
     """Run scenario harness."""
     from src.harness import run_harness
 
-    results = run_harness()
+    harness = run_harness()
+    results = harness.results
     passed = sum(1 for r in results if r.passed)
     failed = len(results) - passed
     print(f"Harness results: {passed} passed, {failed} failed")
@@ -80,6 +81,8 @@ def cmd_harness(args):
     for r in results:
         status = "PASS" if r.passed else "FAIL"
         print(f"  [{status}] {r.scenario_name}")
+
+    harness.write_signal()
 
 
 def cmd_status(args):

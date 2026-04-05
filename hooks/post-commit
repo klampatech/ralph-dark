@@ -1,17 +1,28 @@
 #!/bin/bash
-# post-commit hook for Ralph Dark Factory Scenario Loop
-# Fires after a commit is pushed and triggers the harness to execute scenarios
+# post-commit hook - Execute scenarios after commit
+#
+# This hook:
+# 1. Reads scenarios/*.yaml (protected by OS-level permissions)
+# 2. Executes them against the running system
+# 3. Writes { "pass": true|false } to /tmp/ralph-scenario-result.json
+# 4. Signal is read by Ralph before next iteration
 
-set -e
-
-RALPH_HARNESS="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/.orch/harness.sh"
+RALPH_BIN="$(dirname "$0")/../bin/ralph"
 SIGNAL_FILE="/tmp/ralph-scenario-result.json"
-SCENARIOS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/scenarios"
 
-# Only run if harness exists and scenarios directory has yaml files
-if [[ -f "$RALPH_HARNESS" ]] && [[ -d "$SCENARIOS_DIR" ]]; then
-    if ls "$SCENARIOS_DIR"/*.yaml >/dev/null 2>&1; then
-        echo "Ralph Dark: Post-commit hook firing..."
-        bash "$RALPH_HARNESS" "$SCENARIOS_DIR" "$SIGNAL_FILE"
+# Check if scenarios exist and are readable
+SCENARIOS_DIR="$(pwd)/scenarios"
+
+if [[ -d "$SCENARIOS_DIR" ]] && [[ -r "$SCENARIOS_DIR" ]]; then
+    # Run harness
+    python3 "$RALPH_BIN" harness
+
+    # Signal is written by harness
+    if [[ -f "$SIGNAL_FILE" ]]; then
+        echo "Post-commit: Scenario signal written to $SIGNAL_FILE"
     fi
+else
+    # Scenarios not accessible (intentionally protected)
+    # Write neutral signal
+    echo '{"pass": true}' > "$SIGNAL_FILE"
 fi

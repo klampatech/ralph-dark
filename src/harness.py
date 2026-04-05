@@ -175,9 +175,11 @@ class Harness:
         signal.write()
 
 
-def run_harness() -> HarnessResult:
-    """Run the harness and write signal."""
+def run_harness() -> Harness:
+    """Run the harness and return the harness instance.
+
+    Caller is responsible for calling write_signal() after inspecting results.
+    """
     harness = Harness()
-    results = harness.execute_all()
-    harness.write_signal()
-    return results
+    harness.execute_all()
+    return harness
