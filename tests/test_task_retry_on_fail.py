@@ -348,6 +348,11 @@ class TestRalphProcessFailIntegration:
     def ralph_with_tasks(self, tmp_path):
         """Create Ralph with a multi-task plan."""
         from src.ralph import Ralph
+        from harness.state_manager import RETRY_STATE_FILE
+
+        # Clear state file to ensure test isolation
+        if RETRY_STATE_FILE.exists():
+            RETRY_STATE_FILE.unlink()
 
         plan_file = tmp_path / "IMPLEMENTATION_PLAN.md"
         plan_file.write_text("""# Implementation Plan: Integration Test
