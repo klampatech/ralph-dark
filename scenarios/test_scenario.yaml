@@ -1,0 +1,8 @@
+name: test-scenario
+trigger:
+  type: http
+  method: GET
+  path: /health
+assertions:
+  - type: http_status
+    expect: 200

@@ -1,0 +1,17 @@
+#!/bin/bash
+# post-commit hook for Ralph Dark Factory Scenario Loop
+# Fires after a commit is pushed and triggers the harness to execute scenarios
+
+set -e
+
+RALPH_HARNESS="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/.orch/harness.sh"
+SIGNAL_FILE="/tmp/ralph-scenario-result.json"
+SCENARIOS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/scenarios"
+
+# Only run if harness exists and scenarios directory has yaml files
+if [[ -f "$RALPH_HARNESS" ]] && [[ -d "$SCENARIOS_DIR" ]]; then
+    if ls "$SCENARIOS_DIR"/*.yaml >/dev/null 2>&1; then
+        echo "Ralph Dark: Post-commit hook firing..."
+        bash "$RALPH_HARNESS" "$SCENARIOS_DIR" "$SIGNAL_FILE"
+    fi
+fi
