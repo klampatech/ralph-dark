@@ -2,15 +2,15 @@
 
 ## Tasks
 
-- [[ ]] **health_check** (T001)
+- [[x]] **health_check** (T001)
   health_check
-- [[ ]] **api_status** (T002)
+- [[x]] **api_status** (T002)
   api_status
-- [[ ]] **Valid login returns 200** (T001)
+- [[x]] **Valid login returns 200** (T001)
   Given: a running system at http://localhost:8080; When: POST /api/login {"username": "alice", "password": "secret123"}; Then: the response status is 201
-- [[ ]] **Invalid login returns 401** (T002)
+- [[x]] **Invalid login returns 401** (T002)
   Given: a running system at http://localhost:8080; When: POST /api/login {"username": "alice", "password": "wrong"}; Then: the response status is 401
-- [[ ]] **User record exists in database** (T003)
+- [[x]] **User record exists in database** (T003)
   Given: a running system with database accessible to harness; And: env: { "user_id": "usr_123" }; When: the scenario executes
 
 ---
