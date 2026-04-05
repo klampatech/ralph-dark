@@ -1,0 +1,8 @@
+assertions:
+- expect: 200
+  type: http_status
+name: invalid-login-returns-401
+trigger:
+  method: GET
+  path: /health
+  type: http

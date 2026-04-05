@@ -29,15 +29,15 @@ class TestSignalPassCases:
 
     def test_pass_signal_roundtrip(self, temp_signal_path: Path):
         """Pass signal survives write/read cycle without leaking details."""
-        import src.signal as signal_module
         signal = Signal.pass_signal()
-        original = signal_module.SIGNAL_PATH
-        signal_module.SIGNAL_PATH = temp_signal_path
+        # Patch class attribute directly since _get_signal_path checks it first
+        original = Signal.SIGNAL_PATH
+        Signal.SIGNAL_PATH = temp_signal_path
         try:
             signal.write()
             content = json.loads(temp_signal_path.read_text())
         finally:
-            signal_module.SIGNAL_PATH = original
+            Signal.SIGNAL_PATH = original
         assert content == {"pass": True}
         assert "scenario" not in content
         assert "error" not in content
@@ -65,15 +65,15 @@ class TestSignalFailCases:
 
     def test_fail_signal_roundtrip(self, temp_signal_path: Path):
         """Fail signal survives write/read cycle without leaking details."""
-        import src.signal as signal_module
         signal = Signal.fail_signal()
-        original = signal_module.SIGNAL_PATH
-        signal_module.SIGNAL_PATH = temp_signal_path
+        # Patch class attribute directly since _get_signal_path checks it first
+        original = Signal.SIGNAL_PATH
+        Signal.SIGNAL_PATH = temp_signal_path
         try:
             signal.write()
             content = json.loads(temp_signal_path.read_text())
         finally:
-            signal_module.SIGNAL_PATH = original
+            Signal.SIGNAL_PATH = original
         assert content == {"pass": False}
         assert "scenario" not in content
         assert "error" not in content
@@ -178,49 +178,46 @@ class TestSignalRead:
 
     def test_read_missing_file_returns_fail_signal(self):
         """Missing signal file is treated as fail."""
-        import src.signal as signal_module
-        original = signal_module.SIGNAL_PATH
-        signal_module.SIGNAL_PATH = Path("/tmp/nonexistent_signal_file.json")
+        # Use a path that definitely doesn't exist
+        Signal.SIGNAL_PATH = Path("/tmp/nonexistent_signal_file_12345.json")
         try:
             signal = Signal.read()
         finally:
-            signal_module.SIGNAL_PATH = original
+            # Reset to default
+            Signal.SIGNAL_PATH = Path("/tmp/ralph-scenario-result.json")
         assert signal.pass_result is False
 
     def test_read_malformed_json_returns_fail_signal(self, temp_signal_path: Path):
         """Malformed JSON is treated as fail."""
-        import src.signal as signal_module
         temp_signal_path.write_text("{ invalid json }")
-        original = signal_module.SIGNAL_PATH
-        signal_module.SIGNAL_PATH = temp_signal_path
+        original = Signal.SIGNAL_PATH
+        Signal.SIGNAL_PATH = temp_signal_path
         try:
             signal = Signal.read()
         finally:
-            signal_module.SIGNAL_PATH = original
+            Signal.SIGNAL_PATH = original
         assert signal.pass_result is False
 
     def test_read_valid_pass_signal(self, temp_signal_path: Path):
         """Reading valid pass signal works correctly."""
-        import src.signal as signal_module
         temp_signal_path.write_text('{"pass": true}')
-        original = signal_module.SIGNAL_PATH
-        signal_module.SIGNAL_PATH = temp_signal_path
+        original = Signal.SIGNAL_PATH
+        Signal.SIGNAL_PATH = temp_signal_path
         try:
             signal = Signal.read()
         finally:
-            signal_module.SIGNAL_PATH = original
+            Signal.SIGNAL_PATH = original
         assert signal.pass_result is True
 
     def test_read_valid_spinning_signal(self, temp_signal_path: Path):
         """Reading spinning signal works correctly."""
-        import src.signal as signal_module
         temp_signal_path.write_text('{"spinning": true, "task": "my-task"}')
-        original = signal_module.SIGNAL_PATH
-        signal_module.SIGNAL_PATH = temp_signal_path
+        original = Signal.SIGNAL_PATH
+        Signal.SIGNAL_PATH = temp_signal_path
         try:
             signal = Signal.read()
         finally:
-            signal_module.SIGNAL_PATH = original
+            Signal.SIGNAL_PATH = original
         assert signal.spinning is True
         assert signal.task == "my-task"
 

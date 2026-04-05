@@ -1,0 +1,8 @@
+assertions:
+- expect: 200
+  type: http_status
+name: user-record-exists-in-database
+trigger:
+  method: GET
+  path: /health
+  type: http

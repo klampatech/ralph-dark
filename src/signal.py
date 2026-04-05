@@ -12,27 +12,33 @@ from typing import Optional
 SIGNAL_PATH = Path("/tmp/ralph-scenario-result.json")
 
 
-@dataclass
 class Signal:
     """Represents a scenario execution signal."""
 
-    SIGNAL_PATH: Path = None  # type: ignore[assignment]
+    # Class attribute for signal path - initialized to module level default
+    SIGNAL_PATH: Optional[Path] = None
 
-    pass_result: Optional[bool] = None
-    spinning: bool = False
-    task: Optional[str] = None
-    done: bool = False
-
-    def __post_init__(self):
-        """Initialize SIGNAL_PATH if not set."""
-        if self.SIGNAL_PATH is None:
+    def __init__(
+        self,
+        pass_result: Optional[bool] = None,
+        spinning: bool = False,
+        task: Optional[str] = None,
+        done: bool = False,
+    ):
+        """Initialize signal with given values."""
+        self.pass_result = pass_result
+        self.spinning = spinning
+        self.task = task
+        self.done = done
+        # Initialize SIGNAL_PATH on first instance if not set
+        if Signal.SIGNAL_PATH is None:
             Signal.SIGNAL_PATH = SIGNAL_PATH
 
     @classmethod
     def _get_signal_path(cls) -> Path:
         """Get the current signal path, checking class then module."""
-        # Check if class attribute is a valid Path (not None)
-        if isinstance(cls.SIGNAL_PATH, Path):
+        # Check if class attribute has been properly initialized (not None)
+        if cls.SIGNAL_PATH is not None:
             return cls.SIGNAL_PATH
         # Fall back to module-level SIGNAL_PATH
         import src.signal as signal_module
@@ -64,7 +70,7 @@ class Signal:
     @classmethod
     def read(cls) -> "Signal":
         """Read signal from the signal file."""
-        path = cls.SIGNAL_PATH if isinstance(cls.SIGNAL_PATH, Path) else SIGNAL_PATH
+        path = cls.SIGNAL_PATH if cls.SIGNAL_PATH is not None else SIGNAL_PATH
         if not path.exists():
             return cls(pass_result=False)
         try:
@@ -76,7 +82,7 @@ class Signal:
 
     def write(self) -> None:
         """Write signal to the signal file."""
-        path = Signal.SIGNAL_PATH if isinstance(Signal.SIGNAL_PATH, Path) else SIGNAL_PATH
+        path = self._get_signal_path()
         content = json.dumps(self.to_dict(), separators=(",", ":"))
         path.write_text(content)
 
