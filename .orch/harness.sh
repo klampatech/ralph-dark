@@ -94,28 +94,33 @@ run_scenario() {
     
     # Parse and execute assertions
     if [[ -n "$YQ_CMD" ]]; then
-        local assertions_json
+        # Check if scenario has assertions
+        local has_assertions
         if [[ "$YQ_CMD" == "yq" ]]; then
-            assertions_json=$(yq -ojson '.assertions' "$scenario_file" 2>/dev/null || echo "[]")
+            has_assertions=$(yq '.assertions | length > 0' "$scenario_file" 2>/dev/null || echo "false")
         else
-            assertions_json=$(python3 -c "import yaml,json; d=yaml.safe_load(open('$scenario_file')); print(json.dumps(d.get('assertions',[])))" 2>/dev/null || echo "[]")
+            has_assertions=$(python3 -c "import yaml; d=yaml.safe_load(open('$scenario_file')); print(bool(d.get('assertions',[])))" 2>/dev/null || echo "false")
         fi
         
-        # Basic assertion execution (supports http_status type)
-        if [[ "$trigger_type" == "http" ]] || [[ -n "$trigger_path" ]]; then
-            local expect_status
-            if [[ "$YQ_CMD" == "yq" ]]; then
-                expect_status=$(yq '.assertions[0].expect' "$scenario_file" 2>/dev/null || echo "200")
-            else
-                expect_status=$(python3 -c "import yaml; d=yaml.safe_load(open('$scenario_file')); print(d.get('assertions',[{}])[0].get('expect',200))" 2>/dev/null || echo "200")
+        # Only execute assertions if there are any defined
+        if [[ "$has_assertions" == "true" ]] || [[ "$has_assertions" == "True" ]]; then
+            if [[ "$trigger_type" == "http" ]] || [[ -n "$trigger_path" ]]; then
+                local expect_status
+                if [[ "$YQ_CMD" == "yq" ]]; then
+                    expect_status=$(yq '.assertions[0].expect' "$scenario_file" 2>/dev/null || echo "200")
+                else
+                    expect_status=$(python3 -c "import yaml; d=yaml.safe_load(open('$scenario_file')); print(d.get('assertions',[{}])[0].get('expect',200))" 2>/dev/null || echo "200")
+                fi
+                
+                if [[ "$http_result" == "$expect_status" ]]; then
+                    echo "  Assertion passed: HTTP status $http_result == $expect_status"
+                else
+                    echo "  Assertion failed: HTTP status $http_result != $expect_status"
+                    PASS=false
+                fi
             fi
-            
-            if [[ "$http_result" == "$expect_status" ]]; then
-                echo "  Assertion passed: HTTP status $http_result == $expect_status"
-            else
-                echo "  Assertion failed: HTTP status $http_result != $expect_status"
-                PASS=false
-            fi
+        else
+            echo "  No assertions defined, scenario passes by default"
         fi
     else
         # Fallback: just check if server is reachable
