@@ -68,16 +68,57 @@ class Signal:
         return signal
 
     @classmethod
+    def _is_valid_signal_schema(cls, data: dict) -> bool:
+        """Check if signal data matches a valid signal schema.
+        
+        Valid schemas are:
+        - {"pass": true/false}
+        - {"spinning": true, "task": "..."}
+        - {"done": true}
+        
+        Args:
+            data: Parsed JSON data.
+            
+        Returns:
+            True if schema is valid, False otherwise.
+        """
+        if not isinstance(data, dict):
+            return False
+        
+        # Check for valid pass signal: {"pass": true} or {"pass": false}
+        if "pass" in data:
+            return isinstance(data["pass"], bool)
+        
+        # Check for valid spinning signal: {"spinning": true, "task": "..."}
+        if "spinning" in data:
+            return data["spinning"] is True and "task" in data
+        
+        # Check for valid done signal: {"done": true}
+        if "done" in data:
+            return data["done"] is True
+        
+        return False
+
+    @classmethod
     def read(cls) -> "Signal":
-        """Read signal from the signal file."""
+        """Read signal from the signal file.
+        
+        Returns a Signal with pass_result=False for:
+        - Missing file
+        - Malformed JSON
+        - Invalid signal schema
+        """
         path = cls.SIGNAL_PATH if cls.SIGNAL_PATH is not None else SIGNAL_PATH
         if not path.exists():
             return cls(pass_result=False)
         try:
             content = path.read_text()
             data = json.loads(content)
+            # Validate signal schema - malformed schema treated as fail
+            if not cls._is_valid_signal_schema(data):
+                return cls(pass_result=False)
             return cls.from_dict(data)
-        except (json.JSONDecodeError, KeyError):
+        except (json.JSONDecodeError, KeyError, TypeError):
             return cls(pass_result=False)
 
     def write(self) -> None:

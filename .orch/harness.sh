@@ -37,6 +37,23 @@ execute_assertion() {
     return 0
 }
 
+# Function to check if YAML file is valid
+validate_yaml_file() {
+    local file="$1"
+    if [[ -n "$YQ_CMD" ]]; then
+        if [[ "$YQ_CMD" == "yq" ]]; then
+            # yq returns error for invalid YAML
+            yq '.' "$file" > /dev/null 2>&1
+            return $?
+        else
+            # Python returns error for invalid YAML
+            python3 -c "import yaml; yaml.safe_load(open('$file'))" 2>/dev/null
+            return $?
+        fi
+    fi
+    return 0
+}
+
 # Function to run a scenario
 run_scenario() {
     local scenario_file="$1"
@@ -46,6 +63,13 @@ run_scenario() {
     local trigger_method
     local trigger_body
     local assertions
+    
+    # Validate YAML file first - malformed YAML causes failure
+    if ! validate_yaml_file "$scenario_file"; then
+        echo "Error: Malformed YAML in $scenario_file"
+        PASS=false
+        return 1
+    fi
     
     if [[ -n "$YQ_CMD" ]]; then
         if [[ "$YQ_CMD" == "yq" ]]; then
