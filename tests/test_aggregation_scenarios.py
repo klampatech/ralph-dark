@@ -140,7 +140,7 @@ class TestAnyFailAggregation:
             return make_success_response()
 
         with patch('harness.scenario_harness.SIGNAL_FILE', temp_signal_path):
-            with patch('harness.scenario_harness.urllib.request.urlopen', side_effect=mock_urlopen):
+            with patch('urllib.request.urlopen', side_effect=mock_urlopen):
                 # Execute all scenarios
                 results = []
                 for scenario in five_scenarios_last_fails:
@@ -218,7 +218,7 @@ class TestAnyFailAggregation:
             return make_success_response()
 
         with patch('harness.scenario_harness.SIGNAL_FILE', temp_signal_path):
-            with patch('harness.scenario_harness.urllib.request.urlopen', side_effect=mock_urlopen):
+            with patch('urllib.request.urlopen', side_effect=mock_urlopen):
                 results = []
                 for scenario in scenarios:
                     result = harness.execute_scenario(scenario)
