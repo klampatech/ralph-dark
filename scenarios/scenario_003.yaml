@@ -1,0 +1,16 @@
+name: order-pending-check
+env:
+  order_id: ord_123
+trigger:
+  type: http
+  method: POST
+  path: /api/orders
+  body:
+    items:
+      - sku-a
+assertions:
+  - type: db_record
+    table: orders
+    conditions:
+      id: ord_123
+      status: pending

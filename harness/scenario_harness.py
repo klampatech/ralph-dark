@@ -10,7 +10,7 @@ from typing import Any
 
 import yaml
 
-from harness.db import assert_db_record
+from harness.db import assert_db_record, execute_query, build_select_query
 
 SIGNAL_FILE = Path("/tmp/ralph-scenario-result.json")
 SCENARIOS_DIR = Path("scenarios")
@@ -72,16 +72,34 @@ def check_http_status_by_path(base_url: str, path: str, expected: int) -> bool:
     return check_http_status(url, expected)
 
 
-def check_db_record(query: str, expected_rows: int | None = None) -> bool:
+def check_db_record(
+    query: str | None = None,
+    table: str | None = None,
+    conditions: dict[str, Any] | None = None,
+    expected_rows: int | None = None
+) -> bool:
     """Check database record assertion.
 
+    Supports two formats:
+    1. query-based: pass query string directly
+    2. table+conditions: pass table name and conditions dict
+
     Args:
-        query: SQL query to execute.
+        query: SQL query to execute (legacy format).
+        table: Table name to query (new format).
+        conditions: Dict of column -> value conditions (new format).
         expected_rows: Expected number of rows.
 
     Returns:
         True if assertion passes, False otherwise.
     """
+    if table is not None and conditions is not None:
+        # New format: build query from table and conditions
+        query = build_select_query(table, conditions)
+
+    if query is None:
+        return False
+
     return assert_db_record(query, expected_rows)
 
 
@@ -108,8 +126,12 @@ def run_assertion(assertion: dict[str, Any], base_url: str = DEFAULT_BASE_URL) -
         elif assertion_type == "db_record":
             query = assertion.get("query")
             expected_rows = assertion.get("expected_rows")
-            if query:
-                return check_db_record(query, expected_rows)
+            table = assertion.get("table")
+            conditions = assertion.get("conditions")
+            if table is not None and conditions is not None:
+                return check_db_record(table=table, conditions=conditions)
+            elif query:
+                return check_db_record(query=query, expected_rows=expected_rows)
         return False
 
     # Handle nested format: {"http_status": {"path": "...", "expect": ...}}
@@ -122,7 +144,11 @@ def run_assertion(assertion: dict[str, Any], base_url: str = DEFAULT_BASE_URL) -
 
     if "db_record" in assertion:
         db_conf = assertion["db_record"]
-        return check_db_record(db_conf["query"], db_conf.get("expected_rows"))
+        if "query" in db_conf:
+            return check_db_record(query=db_conf["query"], expected_rows=db_conf.get("expected_rows"))
+        elif "table" in db_conf and "conditions" in db_conf:
+            return check_db_record(table=db_conf["table"], conditions=db_conf["conditions"])
+        return False
 
     return False
 
@@ -243,6 +269,30 @@ class Harness:
     def check_http_status(self, path: str, expected: int) -> bool:
         """Check HTTP status for a path."""
         return check_http_status_by_path(self.base_url, path, expected)
+
+    def check_db_record(
+        self,
+        query: str | None = None,
+        table: str | None = None,
+        conditions: dict[str, Any] | None = None,
+        expected_rows: int | None = None
+    ) -> bool:
+        """Check database record assertion.
+
+        Supports two formats:
+        1. query-based: pass query string directly
+        2. table+conditions: pass table name and conditions dict
+
+        Args:
+            query: SQL query to execute (legacy format).
+            table: Table name to query (new format).
+            conditions: Dict of column -> value conditions (new format).
+            expected_rows: Expected number of rows.
+
+        Returns:
+            True if assertion passes, False otherwise.
+        """
+        return check_db_record(query, table, conditions, expected_rows)
 
 
     def execute_scenario(self, scenario: dict[str, Any]) -> dict[str, Any]:
