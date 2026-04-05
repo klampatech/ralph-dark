@@ -162,7 +162,7 @@ echo "Ralph Dark Harness: Reading scenarios from $SCENARIOS_DIR"
 
 if [[ ! -d "$SCENARIOS_DIR" ]]; then
     echo "Scenarios directory not found: $SCENARIOS_DIR"
-    echo '{"pass": false}' > "$SIGNAL_FILE"
+    echo -n '{"pass": false}' > "$SIGNAL_FILE"
     exit 1
 fi
 
@@ -173,7 +173,7 @@ done < <(find "$SCENARIOS_DIR" -maxdepth 1 -name "*.yaml" -print0 2>/dev/null | 
 
 if [[ ${#scenario_files[@]} -eq 0 ]]; then
     echo "No scenario files found in $SCENARIOS_DIR"
-    echo '{"pass": true}' > "$SIGNAL_FILE"
+    echo -n '{"pass": true}' > "$SIGNAL_FILE"
     exit 0
 fi
 
@@ -185,9 +185,9 @@ done
 
 # Write signal file
 if [[ "$PASS" == "true" ]]; then
-    echo '{"pass": true}' > "$SIGNAL_FILE"
+    echo -n '{"pass": true}' > "$SIGNAL_FILE"
 else
-    echo '{"pass": false}' > "$SIGNAL_FILE"
+    echo -n '{"pass": false}' > "$SIGNAL_FILE"
 fi
 
-echo "Signal written to $SIGNAL_FILE: $(cat "$SIGNAL_FILE")"
+echo "Signal written to $SIGNAL_FILE: $(cat "$SIGNAL_FILE"; echo)"
