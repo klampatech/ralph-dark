@@ -86,3 +86,17 @@ def is_spinning(task: str) -> bool:
         True if retry count exceeds SPIN_THRESHOLD, False otherwise.
     """
     return get_retry_count(task) > SPIN_THRESHOLD
+
+
+def write_spinning_signal(task: str) -> None:
+    """Write spinning signal to /tmp/ralph-scenario-result.json.
+
+    This function is called when a task's retry count exceeds
+    the spinning threshold, signaling the operator to intervene.
+
+    Args:
+        task: The task identifier/name.
+    """
+    from src.signal import Signal
+    signal = Signal.spinning_signal(task)
+    signal.write()
