@@ -149,10 +149,15 @@ class Harness:
         except Exception:
             return False
 
-    def execute_all(self) -> List[HarnessResult]:
-        """Execute all scenarios."""
+    def execute_all(self, scenarios_dir: Path | None = None) -> List[HarnessResult]:
+        """Execute all scenarios.
+        
+        Args:
+            scenarios_dir: Optional custom scenarios directory path.
+                          Defaults to SCENARIOS_DIR.
+        """
         self.results = []
-        scenarios = load_scenarios()
+        scenarios = load_scenarios(scenarios_dir)
 
         for scenario in scenarios:
             result = self.execute_scenario(scenario)
